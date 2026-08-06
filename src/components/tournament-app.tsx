@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Crown, Moon, Plus, Sun, Swords, Trophy, Users, X, Zap } from "lucide-react";
+import { Crown, Moon, Plus, Sparkles, Sun, Swords, Trophy, Users, X, Zap } from "lucide-react";
 import html2canvas from "html2canvas";
 import { advance, createTournament, formatLabel, generateTournamentName, report } from "@/lib/tournament";
 import type { Match, Tournament, TournamentType } from "@/types/tournament";
@@ -62,6 +62,8 @@ const t = {
     robin: "Round Robin",
     robinDetail: "Alle møter alle",
     exportImage: "Eksporter som bilde",
+    crazyMode: "Bananas!",
+    calmMode: "Ro ned",
   },
   en: {
     createTournament: "Create tournament",
@@ -118,6 +120,8 @@ const t = {
     robin: "Round Robin",
     robinDetail: "Everyone plays everyone",
     exportImage: "Export as image",
+    crazyMode: "Go bananas!",
+    calmMode: "Calm down",
   },
 };
 
@@ -127,6 +131,7 @@ export function TournamentApp() {
   const [creating, setCreating] = useState(false);
   const [dark, setDark] = useState(true);
   const [lang, setLang] = useState<Lang>("no");
+  const [crazy, setCrazy] = useState(false);
 
   useEffect(() => { const saved = localStorage.getItem("bracketly-events"); if (saved) setEvents(JSON.parse(saved)); }, []);
   useEffect(() => localStorage.setItem("bracketly-events", JSON.stringify(events)), [events]);
@@ -142,12 +147,14 @@ export function TournamentApp() {
   ];
 
   return (
-    <main>
+    <main className={crazy ? "crazy-mode" : ""}>
+      {crazy && <CrazyBananas />}
       <nav>
         <button className="brand" onClick={() => setSelected(null)}><span><Zap size={21} fill="currentColor" /></span><b>KJELLGAMES<small>TOURNAMENT COMMAND</small></b></button>
         <div className="toggle-bar">
           <button className="toggle-btn" onClick={() => setDark((d) => !d)}>{dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? txt.lightMode : txt.darkMode}</button>
           <button className="toggle-btn" onClick={() => setLang((l) => l === "no" ? "en" : "no")}>{txt.langToggle}</button>
+          <button className="toggle-btn crazy-toggle" aria-pressed={crazy} onClick={() => setCrazy((active) => !active)}><Sparkles size={14} /> {crazy ? txt.calmMode : txt.crazyMode}</button>
           <button className="primary" onClick={() => setCreating(true)}><Plus size={17} /> {txt.createTournament}</button>
         </div>
       </nav>
@@ -155,6 +162,12 @@ export function TournamentApp() {
       {creating && <Create close={() => setCreating(false)} txt={txt} options={options} create={(name, type, names) => { const next = createTournament(name, type, names); setEvents((all) => [next, ...all]); setSelected(next.id); setCreating(false); }} />}
     </main>
   );
+}
+
+function CrazyBananas() {
+  return <div className="banana-storm" aria-hidden="true">
+    {Array.from({ length: 14 }, (_, index) => <span className={`banana banana-${index + 1}`} key={index}>🍌</span>)}
+  </div>;
 }
 
 type Txt = typeof t["no"];
