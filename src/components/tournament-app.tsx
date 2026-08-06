@@ -11,7 +11,7 @@ const t = {
     createTournament: "Opprett turnering",
     runEvents: "ARRANGER EVENTER SOM FØLES LEGENDARISKE",
     heroTitle: <>Arenaen for <i>hvert oppgjør.</i></>,
-    heroDesc: "Fra brettspillrivalisering til LAN-finaler – opprett en stilren turnering, rapporter live-resultater, og la Bracketly ta seg av resten.",
+    heroDesc: "Fra brettspillrivalisering til LAN-finaler – opprett en stilren turnering, rapporter live-resultater, og la KjellGames AS ta seg av resten.",
     startTournament: "Start en turnering",
     liveEngine: "LIVE-MOTOR",
     heroSignal: "Din neste konkurranse starter her",
@@ -67,7 +67,7 @@ const t = {
     createTournament: "Create tournament",
     runEvents: "RUN EVENTS THAT FEEL LEGENDARY",
     heroTitle: <>The arena for <i>every showdown.</i></>,
-    heroDesc: "From tabletop rivalries to LAN finals, create a polished tournament, report live results, and let Bracketly handle what comes next.",
+    heroDesc: "From tabletop rivalries to LAN finals, create a polished tournament, report live results, and let KjellGames AS handle what comes next.",
     startTournament: "Start a tournament",
     liveEngine: "LIVE ENGINE",
     heroSignal: "Your next competition begins here",
@@ -144,7 +144,7 @@ export function TournamentApp() {
   return (
     <main>
       <nav>
-        <button className="brand" onClick={() => setSelected(null)}><span><Zap size={21} fill="currentColor" /></span><b>BRACKETLY<small>TOURNAMENT COMMAND</small></b></button>
+        <button className="brand" onClick={() => setSelected(null)}><span><Zap size={21} fill="currentColor" /></span><b>KJELLGAMES<small>TOURNAMENT COMMAND</small></b></button>
         <div className="toggle-bar">
           <button className="toggle-btn" onClick={() => setDark((d) => !d)}>{dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? txt.lightMode : txt.darkMode}</button>
           <button className="toggle-btn" onClick={() => setLang((l) => l === "no" ? "en" : "no")}>{txt.langToggle}</button>
