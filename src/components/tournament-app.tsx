@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Crown, Moon, Plus, Sparkles, Sun, Swords, Trophy, Users, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Crown, Moon, Plus, Sparkles, Sun, Swords, Trash2, Trophy, UserPlus, Users, X, Zap } from "lucide-react";
 import html2canvas from "html2canvas";
 import { advance, createTournament, formatLabel, generateTournamentName, report } from "@/lib/tournament";
 import type { Match, Tournament, TournamentType } from "@/types/tournament";
@@ -26,10 +26,23 @@ const t = {
     buildTournament: "Bygg turneringen din",
     tournamentName: "Turneringsnavn",
     namePlaceholder: "Fredagsnatt-finale",
+    required: "Påkrevd",
     autoName: "Auto-generer et funky navn",
     format: "Format",
     participants: "Deltakere",
-    participantsHint: "(én per linje eller komma)",
+    participantsHint: "Legg til minst to deltakere for å opprette turneringen.",
+    participantInput: "Legg til deltakere",
+    participantInputPlaceholder: "Skriv eller lim inn navn, separert med komma eller ny linje",
+    addParticipants: "Legg til",
+    participantSeedHint: "Listen er seedingen din. Øverst er seed 1.",
+    participantsEmpty: "Ingen deltakere lagt til ennå.",
+    participantDuplicate: "Alle disse deltakerne er allerede lagt til.",
+    participantRequired: "Legg til {count} til for å fortsette.",
+    participantReady: "Klart! {count} deltakere er seedet.",
+    seed: "Seed",
+    moveUp: "Flytt opp",
+    moveDown: "Flytt ned",
+    removeParticipant: "Fjern deltaker",
     contendersReady: "deltakere klare",
     generateTournament: "Generer turnering",
     currentStage: "NÅVÆRENDE FASE",
@@ -84,10 +97,23 @@ const t = {
     buildTournament: "Build your tournament",
     tournamentName: "Tournament name",
     namePlaceholder: "Friday Night Finals",
+    required: "Required",
     autoName: "Auto-generate a funky name",
     format: "Format",
     participants: "Participants",
-    participantsHint: "(one per line or comma)",
+    participantsHint: "Add at least two participants to create the tournament.",
+    participantInput: "Add participants",
+    participantInputPlaceholder: "Type or paste names, separated by a comma or new line",
+    addParticipants: "Add",
+    participantSeedHint: "This list is your seeding order. The top entry is seed 1.",
+    participantsEmpty: "No participants added yet.",
+    participantDuplicate: "All of these participants have already been added.",
+    participantRequired: "Add {count} more to continue.",
+    participantReady: "Ready! {count} participants are seeded.",
+    seed: "Seed",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    removeParticipant: "Remove participant",
     contendersReady: "contenders ready",
     generateTournament: "Generate tournament",
     currentStage: "CURRENT STAGE",
@@ -158,7 +184,7 @@ export function TournamentApp() {
           <button className="primary" onClick={() => setCreating(true)}><Plus size={17} /> {txt.createTournament}</button>
         </div>
       </nav>
-      {event ? <EventView event={event} save={save} txt={txt} options={options} /> : <Landing events={events} open={setSelected} create={() => setCreating(true)} txt={txt} />}
+      {event ? <EventView event={event} save={save} txt={txt} /> : <Landing events={events} open={setSelected} create={() => setCreating(true)} txt={txt} />}
       {creating && <Create close={() => setCreating(false)} txt={txt} options={options} create={(name, type, names) => { const next = createTournament(name, type, names); setEvents((all) => [next, ...all]); setSelected(next.id); setCreating(false); }} />}
     </main>
   );
@@ -191,22 +217,64 @@ function Landing({ events, open, create, txt }: { events: Tournament[]; open: (i
 function Create({ close, create, txt, options }: { close: () => void; create: (name: string, type: TournamentType, names: string[]) => void; txt: Txt; options: { type: TournamentType; title: string; detail: string; icon: typeof Swords }[] }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<TournamentType>("swiss");
-  const [names, setNames] = useState("");
-  const players = names.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean);
+  const [participantInput, setParticipantInput] = useState("");
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [participantMessage, setParticipantMessage] = useState("");
+  const addParticipants = () => {
+    const existing = new Set(participants.map((participant) => participant.toLocaleLowerCase()));
+    const additions = participantInput
+      .split(/[\n,]+/)
+      .map((participant) => participant.trim().replace(/\s+/g, " ").slice(0, 40))
+      .reduce<string[]>((newParticipants, participant) => {
+        const key = participant.toLocaleLowerCase();
+        if (!participant || existing.has(key)) return newParticipants;
+        existing.add(key);
+        newParticipants.push(participant);
+        return newParticipants;
+      }, []);
+
+    if (!additions.length) {
+      setParticipantMessage(txt.participantDuplicate);
+      return;
+    }
+    setParticipants((current) => [...current, ...additions]);
+    setParticipantInput("");
+    setParticipantMessage("");
+  };
+  const moveParticipant = (from: number, to: number) => setParticipants((current) => {
+    const next = [...current];
+    [next[from], next[to]] = [next[to], next[from]];
+    return next;
+  });
+  const removeParticipant = (index: number) => setParticipants((current) => current.filter((_, participantIndex) => participantIndex !== index));
+  const needed = Math.max(0, 2 - participants.length);
+  const participantStatus = needed
+    ? txt.participantRequired.replace("{count}", String(needed))
+    : txt.participantReady.replace("{count}", String(participants.length));
   return <div className="modal"><section>
     <button className="close" onClick={close}><X /></button>
     <em>{txt.newEvent}</em><h2>{txt.buildTournament}</h2>
-    <label>{txt.tournamentName}<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={txt.namePlaceholder} /></label>
-    <button type="button" className="name-generator" onClick={() => setName(generateTournamentName(type, players))}><Zap size={14} fill="currentColor" /> {txt.autoName}</button>
+    <label>{txt.tournamentName} <small className="required">{txt.required}</small><input autoFocus aria-required="true" value={name} onChange={(e) => setName(e.target.value)} placeholder={txt.namePlaceholder} /></label>
+    <button type="button" className="name-generator" onClick={() => setName(generateTournamentName(type, participants))}><Zap size={14} fill="currentColor" /> {txt.autoName}</button>
     <label>{txt.format}</label>
     <div className="formats">{options.map(({ type: value, title, detail, icon: Icon }) => <button key={value} className={type === value ? "chosen" : ""} onClick={() => setType(value)}><Icon size={18} /><b>{title}</b><small>{detail}</small></button>)}</div>
-    <label>{txt.participants} <small>{txt.participantsHint}</small><textarea value={names} onChange={(e) => setNames(e.target.value)} placeholder={"Apex Predator\nNeon Knights\nPixel Raiders"} /></label>
-    <p className="count">{players.length} {txt.contendersReady}</p>
-    <button className="primary wide" disabled={!name.trim() || players.length === 0} onClick={() => create(name.trim(), type, players)}><Swords size={17} /> {txt.generateTournament}</button>
+    <div className="participant-section">
+      <label>{txt.participants} <small className="required">{txt.required}</small></label>
+      <p className="field-hint">{txt.participantsHint}</p>
+      <div className="participant-entry">
+        <textarea aria-label={txt.participantInput} aria-required="true" value={participantInput} onChange={(e) => setParticipantInput(e.target.value)} placeholder={txt.participantInputPlaceholder} />
+        <button type="button" className="secondary add-participants" onClick={addParticipants}><UserPlus size={16} /> {txt.addParticipants}</button>
+      </div>
+      {participantMessage && <p className="participant-message" role="alert">{participantMessage}</p>}
+      <div className="seed-header"><b>{txt.participantInput}</b><span>{txt.participantSeedHint}</span></div>
+      {participants.length ? <ol className="seed-list">{participants.map((participant, index) => <li key={`${participant}-${index}`}><span>{txt.seed} {index + 1}</span><b>{participant}</b><div><button type="button" aria-label={`${txt.moveUp}: ${participant}`} disabled={index === 0} onClick={() => moveParticipant(index, index - 1)}><ArrowUp size={15} /></button><button type="button" aria-label={`${txt.moveDown}: ${participant}`} disabled={index === participants.length - 1} onClick={() => moveParticipant(index, index + 1)}><ArrowDown size={15} /></button><button type="button" className="remove-participant" aria-label={`${txt.removeParticipant}: ${participant}`} onClick={() => removeParticipant(index)}><Trash2 size={15} /></button></div></li>)}</ol> : <p className="seed-empty">{txt.participantsEmpty}</p>}
+      <p className={`participant-status${needed ? "" : " ready"}`} aria-live="polite">{participantStatus}</p>
+    </div>
+    <button className="primary wide" disabled={!name.trim() || needed > 0} onClick={() => create(name.trim(), type, participants)}><Swords size={17} /> {txt.generateTournament}</button>
   </section></div>;
 }
 
-function EventView({ event, save, txt, options }: { event: Tournament; save: (event: Tournament) => void; txt: Txt; options: { type: TournamentType; title: string; detail: string; icon: typeof Swords }[] }) {
+function EventView({ event, save, txt }: { event: Tournament; save: (event: Tournament) => void; txt: Txt }) {
   const [tab, setTab] = useState("matches");
   const viewRef = useRef<HTMLElement | null>(null);
   const found = event.type === "roundRobin" ? event.rounds.findIndex((r) => !r.every((m) => m.completed)) : event.rounds.length - 1;
