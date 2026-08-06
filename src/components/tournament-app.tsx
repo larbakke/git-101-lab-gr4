@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Crown, Moon, Plus, Sun, Swords, Trophy, Users, X, Zap } from "lucide-react";
+import html2canvas from "html2canvas";
 import { advance, createTournament, formatLabel, generateTournamentName, report } from "@/lib/tournament";
 import type { Match, Tournament, TournamentType } from "@/types/tournament";
 
@@ -60,6 +61,7 @@ const t = {
     elimDetail: "Overlev og avansér",
     robin: "Round Robin",
     robinDetail: "Alle møter alle",
+    exportImage: "Eksporter som bilde",
   },
   en: {
     createTournament: "Create tournament",
@@ -115,6 +117,7 @@ const t = {
     elimDetail: "Survive and advance",
     robin: "Round Robin",
     robinDetail: "Everyone plays everyone",
+    exportImage: "Export as image",
   },
 };
 
@@ -192,6 +195,7 @@ function Create({ close, create, txt, options }: { close: () => void; create: (n
 
 function EventView({ event, save, txt, options }: { event: Tournament; save: (event: Tournament) => void; txt: Txt; options: { type: TournamentType; title: string; detail: string; icon: typeof Swords }[] }) {
   const [tab, setTab] = useState("matches");
+  const viewRef = useRef<HTMLElement | null>(null);
   const found = event.type === "roundRobin" ? event.rounds.findIndex((r) => !r.every((m) => m.completed)) : event.rounds.length - 1;
   const index = found < 0 ? event.rounds.length - 1 : found;
   const matches = event.rounds[index];
@@ -200,17 +204,26 @@ function EventView({ event, save, txt, options }: { event: Tournament; save: (ev
   const done = event.rounds.flat().filter((m) => m.completed).length;
   const tabs = [txt.matches, txt.standings, txt.participants.toLowerCase()];
   const tabKeys = ["matches", "standings", "participants"];
-  return <>
+  const exportTournament = async () => {
+    if (!viewRef.current) return;
+    const canvas = await html2canvas(viewRef.current, { backgroundColor: "#08090d", scale: 2 });
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `${event.name.replace(/[^a-zA-Z0-9_-]/g, "_")}-tournament.png`;
+    link.click();
+  };
+  return <section ref={viewRef}>
     <section className="event-head">
       <div><span>{formatLabel[event.type]}</span><span>{event.participants.length} {txt.players}</span><h1>{event.name}</h1></div>
       {champion ? <div className="champion"><Crown /><b>{champion.name}</b></div> : <div className="round"><small>{txt.currentStage}</small><b>Round {index + 1}</b></div>}
       <div className="progress"><small>{txt.tournamentProgress}</small><i><b style={{ width: `${done / event.rounds.flat().length * 100}%` }} /></i></div>
     </section>
+    <div className="tab-actions"><button className="secondary" onClick={exportTournament}>{txt.exportImage}</button></div>
     <div className="tabs">{tabs.map((label, i) => <button key={tabKeys[i]} className={tab === tabKeys[i] ? "active" : ""} onClick={() => setTab(tabKeys[i])}>{label}</button>)}</div>
     {tab === "matches" && <section><header><div><em>{txt.liveMatchCenter}</em><h2>Round {index + 1}</h2></div>{matches.every((m) => m.completed) && event.type !== "roundRobin" && event.status !== "completed" && <button className="primary" onClick={() => save(advance(event))}>{txt.generateNextRound}</button>}</header><div className="match-grid">{matches.map((m, i) => <MatchCard key={m.id} match={m} number={i + 1} a={player(m.playerA)} b={player(m.playerB)} txt={txt} submit={(a, b) => save(report(event, m.id, a, b))} />)}</div></section>}
     {tab === "standings" && <Standings event={event} txt={txt} />}
     {tab === "participants" && <div className="people">{event.participants.map((p, i) => <div key={p.id}><span>{String(i + 1).padStart(2, "0")}</span><b>{p.name}</b></div>)}</div>}
-  </>;
+  </section>;
 }
 
 function MatchCard({ match, number, a, b, submit, txt }: { match: Match; number: number; a: string; b: string; submit: (a: number, b: number) => void; txt: Txt }) {
